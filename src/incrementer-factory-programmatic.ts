@@ -9,10 +9,8 @@ type NumericStartParts = {
 };
 
 type CharacterStartParts = {
-  prefix: string;
   members: string[];
   startIndex: number;
-  suffix: string;
 };
 
 /**
@@ -136,10 +134,9 @@ export class ProgrammaticIncrementerFactory {
   /**
    * Creates a repeated cycling character incrementer.
    * Supports patterns like `A*2~3`, which yields `A`, `A`, `B`, `B`, `C`, `C`, `A`, ...
-   * Supports wrapped character patterns like `(A)*2~3`.
    */
   static createRepeatedCyclingCharacterIncrementer(source: string): Incrementer | undefined {
-    const match = /^(.*?)\*(.+?)~(.+)$/u.exec(source);
+    const match = /^(.?)\*(.+?)~(.+)$/u.exec(source);
     if (!match) {
       return undefined;
     }
@@ -168,7 +165,7 @@ export class ProgrammaticIncrementerFactory {
    * Supports patterns like `A~3`, which yields `A`, `B`, `C`, `A`, ...
    */
   static createCyclingCharacterIncrementer(source: string): Incrementer | undefined {
-    const match = /^(.*?)~(.+)$/u.exec(source);
+    const match = /^(.?)~(.+)$/u.exec(source);
     if (!match) {
       return undefined;
     }
@@ -196,7 +193,7 @@ export class ProgrammaticIncrementerFactory {
    * Supports patterns like `A*3`, which yields `A`, `A`, `A`, `B`, ...
    */
   static createRepeatedCharacterIncrementer(source: string): Incrementer | undefined {
-    const match = /^(.*?)\*(.+)$/u.exec(source);
+    const match = /^(.?)\*(.+)$/u.exec(source);
     if (!match) {
       return undefined;
     }
@@ -235,25 +232,16 @@ function parseNumericStartSource(source: string): NumericStartParts | undefined 
 }
 
 function parseCharacterStartSource(source: string): CharacterStartParts | undefined {
-  let sourceOffset = 0;
-  for (const char of [...source]) {
-    for (const charMemberSet of CHAR_MEMBER_SETS) {
-      const members = [...charMemberSet];
-      const startIndex = members.indexOf(char);
-      if (startIndex < 0) {
-        continue;
-      }
+  if ([...source].length !== 1) {
+    return undefined;
+  }
 
-      const prefix = source.slice(0, sourceOffset);
-      const suffix = source.slice(sourceOffset + char.length);
-      if (/[~*]/u.test(prefix + suffix) || /[A-Za-z0-9]/u.test(prefix + suffix)) {
-        return undefined;
-      }
-
-      return { prefix, members, startIndex, suffix };
+  for (const charMemberSet of CHAR_MEMBER_SETS) {
+    const members = [...charMemberSet];
+    const startIndex = members.indexOf(source);
+    if (startIndex >= 0) {
+      return { members, startIndex };
     }
-
-    sourceOffset += char.length;
   }
 
   return undefined;
@@ -269,13 +257,13 @@ function createCharacterFormatter(
   repeat: number,
   cycleLength?: number
 ): Incrementer {
-  const { prefix, members, startIndex, suffix } = startParts;
+  const { members, startIndex } = startParts;
 
   return (index: number) => {
     // Repeat stretches each value; cycle folds the stretched index back to a fixed period.
     const repeatedIndex = Math.floor(index / repeat);
     const offset = cycleLength === undefined ? repeatedIndex : repeatedIndex % cycleLength;
-    return `${prefix}${members[(startIndex + offset) % members.length]}${suffix}`;
+    return members[(startIndex + offset) % members.length];
   };
 }
 
