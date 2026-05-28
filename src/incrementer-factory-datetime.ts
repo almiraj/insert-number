@@ -258,6 +258,33 @@ export default class DatetimeIncrementerFactory {
       ].join(":");
     };
   }
+
+  /**
+   * Repeats invalid date/time-looking inputs instead of falling through to numeric incrementing.
+   */
+  static createInvalidDateTimeRepeatFormatter(source: string): Incrementer | undefined {
+    const looksLikeInvalidDateTime =
+      // `2026/13` or `4/32` similar to `2026/12` or `4/31`.
+      /(?:^|[^\d])\d+[\/-]\d+(?:$|[^\d])/u.test(source) ||
+      // `2026/13/29` similar to `2026/12/29`.
+      /(?:^|[^\d])\d+[\/-]\d+[\/-]\d+ ?(?:$|[^\d])/u.test(source) ||
+      // `2026/04/30 23:59:60` similar to `2026/04/30 23:59:59`.
+      /(?:^|[^\d])\d+[\/-]\d+[\/-]\d+\s+\d+:\d+:\d+(?:$|[^\d])/u.test(source) ||
+      // `20269` similar to `202609`.
+      /^\d{5}$/u.test(source) ||
+      // `202613` similar to `202612`.
+      /^\d{6}$/u.test(source) ||
+      // `20260229` similar to `20260228`.
+      /^\d{8}$/u.test(source) ||
+      // `23:60` or `23:59:60` similar to `23:59` or `23:59:59`.
+      /^\d+:\d+(?::\d+)?$/u.test(source);
+
+    if (!looksLikeInvalidDateTime) {
+      return undefined;
+    }
+
+    return (_index: number) => source;
+  }
 }
 
 function addDays(date: Date, amount: number): Date {
