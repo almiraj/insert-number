@@ -260,15 +260,15 @@ export default class DatetimeIncrementerFactory {
   }
 
   /**
-   * Repeats invalid date/time-looking inputs instead of falling through to numeric incrementing.
+   * Repeats invalid date/time-looking inputs (fallback).
    */
   static createInvalidDateTimeRepeatFormatter(source: string): Incrementer | undefined {
     const looksLikeInvalidDateTime =
-      // `2026/13` or `4/32` similar to `2026/12` or `4/31`.
+      // `2026/13` or `4/32`, `_4/31` similar to `2026/12` or `4/31`.
       /(?:^|[^\d])\d+[\/-]\d+(?:$|[^\d])/u.test(source) ||
-      // `2026/13/29` similar to `2026/12/29`.
+      // `2026/13/29` or `4/32/2026`, `_4/31/2026` similar to `2026/12/29` or `4/30/2026`.
       /(?:^|[^\d])\d+[\/-]\d+[\/-]\d+ ?(?:$|[^\d])/u.test(source) ||
-      // `2026/04/30 23:59:60` similar to `2026/04/30 23:59:59`.
+      // `2026/04/30 23:59:60` or `_2026/04/30 23:59:59` similar to `2026/04/30 23:59:59`.
       /(?:^|[^\d])\d+[\/-]\d+[\/-]\d+\s+\d+:\d+:\d+(?:$|[^\d])/u.test(source) ||
       // `20269` similar to `202609`.
       /^\d{5}$/u.test(source) ||
