@@ -1,4 +1,19 @@
 import type { Incrementer } from "./incrementer";
+import { CHAR_MEMBER_SETS } from "./incrementer-constant";
+
+type NumericStartParts = {
+  prefix: string;
+  padding: string;
+  digits: string;
+  suffix: string;
+};
+
+type CharacterStartParts = {
+  prefix: string;
+  members: string[];
+  startIndex: number;
+  suffix: string;
+};
 
 /**
  * Creates incrementers for compact programmatic prompts.
@@ -20,27 +35,22 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
-    if (!matchStartParts) {
-      return undefined;
-    }
-    const [, prefix, padding, digits, suffix] = matchStartParts;
-    if (/[~*]/u.test(prefix + suffix)) {
+    const startParts = parseNumericStartSource(startSource);
+    if (!startParts) {
       return undefined;
     }
 
-    const matchRepeatDigits = /\d+/u.exec(repeatSource);
-    const repeat = matchRepeatDigits ? Number.parseInt(matchRepeatDigits[0], 10) : undefined;
+    const repeat = parseIntegerPart(repeatSource);
     if (repeat === undefined || repeat <= 0) {
       return undefined;
     }
 
-    const matchEndDigits = /\d+/u.exec(endSource);
-    const end = matchEndDigits ? Number.parseInt(matchEndDigits[0], 10) : undefined;
+    const end = parseIntegerPart(endSource);
     if (end === undefined) {
       return undefined;
     }
 
+    const { prefix, padding, digits, suffix } = startParts;
     const start = Number.parseInt(digits, 10);
     const plusMinus = start <= end ? 1 : -1;
     const rangeLength = Math.abs(end - start) + 1;
@@ -68,21 +78,17 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
-    if (!matchStartParts) {
-      return undefined;
-    }
-    const [, prefix, padding, digits, suffix] = matchStartParts;
-    if (/[~*]/u.test(prefix + suffix)) {
+    const startParts = parseNumericStartSource(startSource);
+    if (!startParts) {
       return undefined;
     }
 
-    const matchEndDigits = /\d+/u.exec(endSource);
-    const end = matchEndDigits ? Number.parseInt(matchEndDigits[0], 10) : undefined;
+    const end = parseIntegerPart(endSource);
     if (end === undefined) {
       return undefined;
     }
 
+    const { prefix, padding, digits, suffix } = startParts;
     const start = Number.parseInt(digits, 10);
     const plusMinus = start <= end ? 1 : -1;
     const rangeLength = Math.abs(end - start) + 1;
@@ -109,20 +115,16 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
-    if (!matchStartParts) {
+    const startParts = parseNumericStartSource(startSource);
+    if (!startParts) {
       return undefined;
     }
-    const [, prefix, padding, digits, suffix] = matchStartParts;
-    if (/[~*]/u.test(prefix + suffix)) {
-      return undefined;
-    }
-    const matchRepeatDigits = /\d+/u.exec(repeatSource);
-    const repeat = matchRepeatDigits ? Number.parseInt(matchRepeatDigits[0], 10) : undefined;
+    const repeat = parseIntegerPart(repeatSource);
     if (repeat === undefined || repeat <= 0) {
       return undefined;
     }
 
+    const { prefix, padding, digits, suffix } = startParts;
     const start = Number.parseInt(digits, 10);
     const format = createNumberFormatter(prefix, padding, digits, suffix);
 
@@ -130,6 +132,151 @@ export class ProgrammaticIncrementerFactory {
       return format(start + Math.floor(index / repeat));
     };
   }
+
+  /**
+   * Creates a repeated cycling character incrementer.
+   * Supports patterns like `A*2~3`, which yields `A`, `A`, `B`, `B`, `C`, `C`, `A`, ...
+   * Supports wrapped character patterns like `(A)*2~3`.
+   */
+  static createRepeatedCyclingCharacterIncrementer(source: string): Incrementer | undefined {
+    const match = /^(.*?)\*(.+?)~(.+)$/u.exec(source);
+    if (!match) {
+      return undefined;
+    }
+
+    const [, startSource, repeatSource, cycleLengthSource] = match;
+    if (/[~*]/u.test(repeatSource + cycleLengthSource)) {
+      return undefined;
+    }
+
+    const startParts = parseCharacterStartSource(startSource);
+    if (!startParts) {
+      return undefined;
+    }
+
+    const repeat = parseIntegerPart(repeatSource);
+    const cycleLength = parseIntegerPart(cycleLengthSource);
+    if (repeat === undefined || cycleLength === undefined || repeat <= 0 || cycleLength <= 0) {
+      return undefined;
+    }
+
+    return createCharacterFormatter(startParts, repeat, cycleLength);
+  }
+
+  /**
+   * Creates a cycling character incrementer.
+   * Supports patterns like `A~3`, which yields `A`, `B`, `C`, `A`, ...
+   */
+  static createCyclingCharacterIncrementer(source: string): Incrementer | undefined {
+    const match = /^(.*?)~(.+)$/u.exec(source);
+    if (!match) {
+      return undefined;
+    }
+
+    const [, startSource, cycleLengthSource] = match;
+    if (/[~*]/u.test(cycleLengthSource)) {
+      return undefined;
+    }
+
+    const startParts = parseCharacterStartSource(startSource);
+    if (!startParts) {
+      return undefined;
+    }
+
+    const cycleLength = parseIntegerPart(cycleLengthSource);
+    if (cycleLength === undefined || cycleLength <= 0) {
+      return undefined;
+    }
+
+    return createCharacterFormatter(startParts, 1, cycleLength);
+  }
+
+  /**
+   * Creates a repeated character incrementer.
+   * Supports patterns like `A*3`, which yields `A`, `A`, `A`, `B`, ...
+   */
+  static createRepeatedCharacterIncrementer(source: string): Incrementer | undefined {
+    const match = /^(.*?)\*(.+)$/u.exec(source);
+    if (!match) {
+      return undefined;
+    }
+
+    const [, startSource, repeatSource] = match;
+    if (/[~*]/u.test(repeatSource)) {
+      return undefined;
+    }
+
+    const startParts = parseCharacterStartSource(startSource);
+    if (!startParts) {
+      return undefined;
+    }
+
+    const repeat = parseIntegerPart(repeatSource);
+    if (repeat === undefined || repeat <= 0) {
+      return undefined;
+    }
+
+    return createCharacterFormatter(startParts, repeat);
+  }
+}
+
+function parseNumericStartSource(source: string): NumericStartParts | undefined {
+  const match = /^(.*?)( *)(\d+)(.*)$/u.exec(source);
+  if (!match) {
+    return undefined;
+  }
+
+  const [, prefix, padding, digits, suffix] = match;
+  if (/[~*]/u.test(prefix + suffix)) {
+    return undefined;
+  }
+
+  return { prefix, padding, digits, suffix };
+}
+
+function parseCharacterStartSource(source: string): CharacterStartParts | undefined {
+  let sourceOffset = 0;
+  for (const char of [...source]) {
+    for (const charMemberSet of CHAR_MEMBER_SETS) {
+      const members = [...charMemberSet];
+      const startIndex = members.indexOf(char);
+      if (startIndex < 0) {
+        continue;
+      }
+
+      const prefix = source.slice(0, sourceOffset);
+      const suffix = source.slice(sourceOffset + char.length);
+      if (/[~*]/u.test(prefix + suffix) || /[A-Za-z0-9]/u.test(prefix + suffix)) {
+        return undefined;
+      }
+
+      return { prefix, members, startIndex, suffix };
+    }
+
+    sourceOffset += char.length;
+  }
+
+  return undefined;
+}
+
+function parseIntegerPart(source: string): number | undefined {
+  const match = /\d+/u.exec(source);
+  return match ? Number.parseInt(match[0], 10) : undefined;
+}
+
+function createCharacterFormatter(
+  startParts: CharacterStartParts,
+  repeat: number,
+  cycleLength?: number
+): Incrementer {
+  const { prefix, members, startIndex, suffix } = startParts;
+
+  return (index: number) => {
+    // Repeat stretches each value; cycle folds the stretched index back to a fixed period.
+    const repeatedIndex = Math.floor(index / repeat);
+    const offset = cycleLength === undefined ? repeatedIndex : repeatedIndex % cycleLength;
+    return `${prefix}${members[(startIndex + offset) % members.length]}${suffix}`;
+  };
 }
 
 function createNumberFormatter(prefix: string, padding: string, digits: string, suffix: string): (value: number) => string {

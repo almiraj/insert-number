@@ -11,8 +11,11 @@ import { ProgrammaticIncrementerFactory } from "./incrementer-factory-programmat
 export function detectIncrementer(source: string): Incrementer | undefined {
   return (
     ProgrammaticIncrementerFactory.createRepeatedCyclingNumericIncrementer(source) ??
+    ProgrammaticIncrementerFactory.createRepeatedCyclingCharacterIncrementer(source) ??
     ProgrammaticIncrementerFactory.createCyclingNumericIncrementer(source) ??
+    ProgrammaticIncrementerFactory.createCyclingCharacterIncrementer(source) ??
     ProgrammaticIncrementerFactory.createRepeatedNumericIncrementer(source) ??
+    ProgrammaticIncrementerFactory.createRepeatedCharacterIncrementer(source) ??
     DatetimeIncrementerFactory.createFullDateTimeIncrementer(source) ??
     DatetimeIncrementerFactory.createYmdIncrementer(source) ??
     DatetimeIncrementerFactory.createMdydIncrementer(source) ??

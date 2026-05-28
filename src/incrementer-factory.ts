@@ -1,4 +1,5 @@
 import type { Incrementer } from "./incrementer";
+import { CHAR_MEMBER_SETS } from "./incrementer-constant";
 
 /**
  * Creates incrementers for numbers, characters, and fallback values.
@@ -190,30 +191,10 @@ export default class IncrementerFactory {
    * Returns `undefined` when `0-9` or `０-９` appears before a supported character.
    */
   static createCharacterIncrementer(source: string): Incrementer | undefined {
-    const charMemberSets = [
-      "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚",
-      "ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ",
-      "abcdefghijklmnopqrstuvwxyz",
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-      "αβγδεζηθικλμνξοπρστυφχψω",
-      "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ",
-      "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя",
-      "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ",
-      "abcdefghijklmnopqrstuvwxyzåäö",
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ",
-      "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ",
-      "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ",
-      "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん",
-      "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン",
-      "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ",
-      "子丑寅卯辰巳午未申酉戌亥",
-      "가나다라마바사아자차카타파하"
-    ];
-
     let sourceOffset = 0;
     for (const char of [...source]) {
 
-      for (const charMemberSet of charMemberSets) {
+      for (const charMemberSet of CHAR_MEMBER_SETS) {
         const charMembers = [...charMemberSet];
         const startIdx = charMembers.indexOf(char);
         if (startIdx >= 0) {
