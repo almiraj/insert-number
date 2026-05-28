@@ -1,18 +1,6 @@
 import type { Incrementer } from "./incrementer";
 import { CHAR_MEMBER_SETS } from "./incrementer-constant";
 
-type NumericStartParts = {
-  prefix: string;
-  padding: string;
-  digits: string;
-  suffix: string;
-};
-
-type CharacterStartParts = {
-  members: string[];
-  startIndex: number;
-};
-
 /**
  * Creates incrementers for compact programmatic prompts.
  */
@@ -33,22 +21,27 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const startParts = parseNumericStartSource(startSource);
-    if (!startParts) {
+    const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
+    if (!matchStartParts) {
+      return undefined;
+    }
+    const [, prefix, padding, digits, suffix] = matchStartParts;
+    if (/[~*]/u.test(prefix + suffix)) {
       return undefined;
     }
 
-    const repeat = parseIntegerPart(repeatSource);
+    const matchRepeatDigits = /\d+/u.exec(repeatSource);
+    const repeat = matchRepeatDigits ? Number.parseInt(matchRepeatDigits[0], 10) : undefined;
     if (repeat === undefined || repeat <= 0) {
       return undefined;
     }
 
-    const end = parseIntegerPart(endSource);
+    const matchEndDigits = /\d+/u.exec(endSource);
+    const end = matchEndDigits ? Number.parseInt(matchEndDigits[0], 10) : undefined;
     if (end === undefined) {
       return undefined;
     }
 
-    const { prefix, padding, digits, suffix } = startParts;
     const start = Number.parseInt(digits, 10);
     const plusMinus = start <= end ? 1 : -1;
     const rangeLength = Math.abs(end - start) + 1;
@@ -76,17 +69,21 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const startParts = parseNumericStartSource(startSource);
-    if (!startParts) {
+    const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
+    if (!matchStartParts) {
+      return undefined;
+    }
+    const [, prefix, padding, digits, suffix] = matchStartParts;
+    if (/[~*]/u.test(prefix + suffix)) {
       return undefined;
     }
 
-    const end = parseIntegerPart(endSource);
+    const matchEndDigits = /\d+/u.exec(endSource);
+    const end = matchEndDigits ? Number.parseInt(matchEndDigits[0], 10) : undefined;
     if (end === undefined) {
       return undefined;
     }
 
-    const { prefix, padding, digits, suffix } = startParts;
     const start = Number.parseInt(digits, 10);
     const plusMinus = start <= end ? 1 : -1;
     const rangeLength = Math.abs(end - start) + 1;
@@ -113,16 +110,20 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const startParts = parseNumericStartSource(startSource);
-    if (!startParts) {
+    const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
+    if (!matchStartParts) {
       return undefined;
     }
-    const repeat = parseIntegerPart(repeatSource);
+    const [, prefix, padding, digits, suffix] = matchStartParts;
+    if (/[~*]/u.test(prefix + suffix)) {
+      return undefined;
+    }
+    const matchRepeatDigits = /\d+/u.exec(repeatSource);
+    const repeat = matchRepeatDigits ? Number.parseInt(matchRepeatDigits[0], 10) : undefined;
     if (repeat === undefined || repeat <= 0) {
       return undefined;
     }
 
-    const { prefix, padding, digits, suffix } = startParts;
     const start = Number.parseInt(digits, 10);
     const format = createNumberFormatter(prefix, padding, digits, suffix);
 
@@ -146,18 +147,13 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const startParts = parseCharacterStartSource(startSource);
-    if (!startParts) {
-      return undefined;
-    }
-
     const repeat = parseIntegerPart(repeatSource);
     const cycleLength = parseIntegerPart(cycleLengthSource);
     if (repeat === undefined || cycleLength === undefined || repeat <= 0 || cycleLength <= 0) {
       return undefined;
     }
 
-    return createCharacterFormatter(startParts, repeat, cycleLength);
+    return createCharacterFormatter(startSource, repeat, cycleLength);
   }
 
   /**
@@ -175,17 +171,12 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const startParts = parseCharacterStartSource(startSource);
-    if (!startParts) {
-      return undefined;
-    }
-
     const cycleLength = parseIntegerPart(cycleLengthSource);
     if (cycleLength === undefined || cycleLength <= 0) {
       return undefined;
     }
 
-    return createCharacterFormatter(startParts, 1, cycleLength);
+    return createCharacterFormatter(startSource, 1, cycleLength);
   }
 
   /**
@@ -203,35 +194,16 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const startParts = parseCharacterStartSource(startSource);
-    if (!startParts) {
-      return undefined;
-    }
-
     const repeat = parseIntegerPart(repeatSource);
     if (repeat === undefined || repeat <= 0) {
       return undefined;
     }
 
-    return createCharacterFormatter(startParts, repeat);
+    return createCharacterFormatter(startSource, repeat);
   }
 }
 
-function parseNumericStartSource(source: string): NumericStartParts | undefined {
-  const match = /^(.*?)( *)(\d+)(.*)$/u.exec(source);
-  if (!match) {
-    return undefined;
-  }
-
-  const [, prefix, padding, digits, suffix] = match;
-  if (/[~*]/u.test(prefix + suffix)) {
-    return undefined;
-  }
-
-  return { prefix, padding, digits, suffix };
-}
-
-function parseCharacterStartSource(source: string): CharacterStartParts | undefined {
+function createCharacterFormatter(source: string, repeat: number, cycleLength?: number): Incrementer | undefined {
   if ([...source].length !== 1) {
     return undefined;
   }
@@ -239,9 +211,16 @@ function parseCharacterStartSource(source: string): CharacterStartParts | undefi
   for (const charMemberSet of CHAR_MEMBER_SETS) {
     const members = [...charMemberSet];
     const startIndex = members.indexOf(source);
-    if (startIndex >= 0) {
-      return { members, startIndex };
+    if (startIndex < 0) {
+      continue;
     }
+
+    return (index: number) => {
+      // Repeat stretches each value; cycle folds the stretched index back to a fixed period.
+      const repeatedIndex = Math.floor(index / repeat);
+      const offset = cycleLength === undefined ? repeatedIndex : repeatedIndex % cycleLength;
+      return members[(startIndex + offset) % members.length];
+    };
   }
 
   return undefined;
@@ -250,21 +229,6 @@ function parseCharacterStartSource(source: string): CharacterStartParts | undefi
 function parseIntegerPart(source: string): number | undefined {
   const match = /\d+/u.exec(source);
   return match ? Number.parseInt(match[0], 10) : undefined;
-}
-
-function createCharacterFormatter(
-  startParts: CharacterStartParts,
-  repeat: number,
-  cycleLength?: number
-): Incrementer {
-  const { members, startIndex } = startParts;
-
-  return (index: number) => {
-    // Repeat stretches each value; cycle folds the stretched index back to a fixed period.
-    const repeatedIndex = Math.floor(index / repeat);
-    const offset = cycleLength === undefined ? repeatedIndex : repeatedIndex % cycleLength;
-    return members[(startIndex + offset) % members.length];
-  };
 }
 
 function createNumberFormatter(prefix: string, padding: string, digits: string, suffix: string): (value: number) => string {
