@@ -46,14 +46,15 @@ export default class DatetimeIncrementerFactory {
   /**
    * Creates a year-month-day incrementer.
    * Supports patterns like `20260429`, `2026/04/29`, `2026-04-29`, `2026/4/29` and `2026-4-29`.
+   * Exceptionally allows one trailing space for inputs in the middle of becoming a full date-time.
    */
   static createYmdIncrementer(source: string): Incrementer | undefined {
-    const match = /^(\d{4})(([\/-])?)(\d{1,2})\2(\d{1,2})$/u.exec(source);
+    const match = /^(\d{4})(([\/-])?)(\d{1,2})\2(\d{1,2})( ?)$/u.exec(source);
     if (!match) {
       return undefined;
     }
 
-    const [, yearText, separatorText, , monthText, dayText] = match;
+    const [, yearText, separatorText, , monthText, dayText, trailingSpace] = match;
     if (separatorText === "" && source.length !== 8) {
       // Treat "202611" as "2026/11", not as "2026/1/1".
       return undefined;
@@ -75,7 +76,7 @@ export default class DatetimeIncrementerFactory {
         String(incrementedDate.getUTCFullYear()).padStart(yearText.length, "0"),
         String(incrementedDate.getUTCMonth() + 1).padStart(monthPaddingWidth, "0"),
         String(incrementedDate.getUTCDate()).padStart(dayPaddingWidth, "0")
-      ].join(separatorText);
+      ].join(separatorText) + trailingSpace;
     };
   }
 

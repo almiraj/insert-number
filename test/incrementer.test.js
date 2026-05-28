@@ -436,6 +436,19 @@ describe("avoid parsing as date", () => {
   }
 });
 
+describe("exceptionally parses dates with a trailing space", () => {
+  const examples = [
+    ["2026/12/30 ", ["2026/12/30 ", "2026/12/31 ", "2027/01/01 ", "2027/01/02 "]],
+    ["2026-12-30 ", ["2026-12-30 ", "2026-12-31 ", "2027-01-01 ", "2027-01-02 "]],
+  ];
+
+  for (const [source, expected] of examples) {
+    it(`formats ${source}`, () => {
+      assert.deepEqual(incrementFor(source, 4), expected);
+    });
+  }
+});
+
 describe("validates Unicode-ordered characterSet sequences", () => {
   const unicodeOrderedStartChars = [
     "①",
