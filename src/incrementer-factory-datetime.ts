@@ -5,11 +5,11 @@ import type { Incrementer } from "./incrementer";
  */
 export default class DatetimeIncrementerFactory {
   /**
-   * Creates a date-time incrementer.
-   * Supports patterns like `2026/12/31 23:59:58` and `2026-12-31 23:59:58`.
+   * Creates a year-month-day time incrementer.
+   * Supports patterns like `2026/12/31 23:58`, `2026/12/31 23:59:58`, `2026-12-31 23:58`, and `2026-12-31 23:59:58`.
    */
-  static createFullDateTimeIncrementer(source: string): Incrementer | undefined {
-    const match = /^(\d{4})([\/-])(\d{1,2})\2(\d{1,2})(\s+)(\d{1,2}):(\d{1,2}):(\d{1,2})$/u.exec(source);
+  static createYmdTimeIncrementer(source: string): Incrementer | undefined {
+    const match = /^(\d{4})([\/-])(\d{1,2})\2(\d{1,2})(\s+)(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/u.exec(source);
     if (!match) {
       return undefined;
     }
@@ -20,40 +20,72 @@ export default class DatetimeIncrementerFactory {
     const day = Number(dayText);
     const hour = Number(hourText);
     const minute = Number(minuteText);
-    const second = Number(secondText);
+    const second = Number(secondText ?? "0");
 
     if (!isValidDate(year, month, day) || !isValidDateTimeTime(hour, minute, second)) {
       return undefined;
     }
 
     const start = Date.UTC(year, month - 1, day, hour, minute, second);
+    const intervalMs = secondText ? 1000 : 60 * 1000;
     return (index: number) => {
-      const incrementedDate = new Date(start + index * 1000);
+      const incrementedDate = new Date(start + index * intervalMs);
       const dateText = [
         String(incrementedDate.getUTCFullYear()).padStart(yearText.length, "0"),
         String(incrementedDate.getUTCMonth() + 1).padStart(monthText.length, "0"),
         String(incrementedDate.getUTCDate()).padStart(dayText.length, "0")
       ].join(separatorText);
-      const timeText = [
-        String(incrementedDate.getUTCHours()).padStart(hourText.length, "0"),
-        String(incrementedDate.getUTCMinutes()).padStart(minuteText.length, "0"),
-        String(incrementedDate.getUTCSeconds()).padStart(secondText.length, "0")
-      ].join(":");
-      return dateText + spacer + timeText;
+      return dateText + spacer + formatTime(incrementedDate, hourText, minuteText, secondText);
+    };
+  }
+
+  /**
+   * Creates a month-day time incrementer.
+   * Supports patterns like `12/31 23:58`, `12/31 23:59:58`, `12-31 23:58`, and `12-31 23:59:58`.
+   */
+  static createMdTimeIncrementer(source: string): Incrementer | undefined {
+    const match = /^(\d{1,2})([\/-])(\d{1,2})(\s+)(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/u.exec(source);
+    if (!match) {
+      return undefined;
+    }
+
+    const [, monthText, separatorText, dayText, spacer, hourText, minuteText, secondText] = match;
+    const month = Number(monthText);
+    const day = Number(dayText);
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    const second = Number(secondText ?? "0");
+
+    if (!isValidMonthDay(month, day) || !isValidDateTimeTime(hour, minute, second)) {
+      return undefined;
+    }
+
+    const start = Date.UTC(1970, month - 1, day, hour, minute, second);
+    const intervalMs = secondText ? 1000 : 60 * 1000;
+    const monthPaddingWidth = getDatePartPaddingWidth(monthText);
+    const dayPaddingWidth = getDatePartPaddingWidth(dayText, monthText);
+    return (index: number) => {
+      const incrementedDate = new Date(start + index * intervalMs);
+      const dateText = [
+        String(incrementedDate.getUTCMonth() + 1).padStart(monthPaddingWidth, "0"),
+        String(incrementedDate.getUTCDate()).padStart(dayPaddingWidth, "0")
+      ].join(separatorText);
+      return dateText + spacer + formatTime(incrementedDate, hourText, minuteText, secondText);
     };
   }
 
   /**
    * Creates a year-month-day incrementer.
    * Supports patterns like `20260429`, `2026/04/29`, `2026-04-29`, `2026/4/29` and `2026-4-29`.
+   * Exceptionally allows one trailing space for inputs in the middle of becoming a full date-time.
    */
   static createYmdIncrementer(source: string): Incrementer | undefined {
-    const match = /^(\d{4})(([\/-])?)(\d{1,2})\2(\d{1,2})$/u.exec(source);
+    const match = /^(\d{4})(([\/-])?)(\d{1,2})\2(\d{1,2})( ?)$/u.exec(source);
     if (!match) {
       return undefined;
     }
 
-    const [, yearText, separatorText, , monthText, dayText] = match;
+    const [, yearText, separatorText, , monthText, dayText, trailingSpace] = match;
     if (separatorText === "" && source.length !== 8) {
       // Treat "202611" as "2026/11", not as "2026/1/1".
       return undefined;
@@ -75,7 +107,7 @@ export default class DatetimeIncrementerFactory {
         String(incrementedDate.getUTCFullYear()).padStart(yearText.length, "0"),
         String(incrementedDate.getUTCMonth() + 1).padStart(monthPaddingWidth, "0"),
         String(incrementedDate.getUTCDate()).padStart(dayPaddingWidth, "0")
-      ].join(separatorText);
+      ].join(separatorText) + trailingSpace;
     };
   }
 
@@ -257,6 +289,33 @@ export default class DatetimeIncrementerFactory {
       ].join(":");
     };
   }
+
+  /**
+   * Repeats invalid date/time-looking inputs (fallback).
+   */
+  static createInvalidDateTimeRepeatFormatter(source: string): Incrementer | undefined {
+    const looksLikeInvalidDateTime =
+      // `2026/13` or `4/32`, `_4/31` similar to `2026/12` or `4/31`.
+      /(?:^|[^\d])\d+[\/-]\d+(?:$|[^\d])/u.test(source) ||
+      // `2026/13/29` or `4/32/2026`, `_4/31/2026` similar to `2026/12/29` or `4/30/2026`.
+      /(?:^|[^\d])\d+[\/-]\d+[\/-]\d+ ?(?:$|[^\d])/u.test(source) ||
+      // `2026/04/30 23:60`, `4/30 23:60`, or `_2026/04/30 23:59:59` similar to valid date-times.
+      /(?:^|[^\d])\d+[\/-]\d+(?:[\/-]\d+)?\s+\d+:\d+(?::\d+)?(?:$|[^\d])/u.test(source) ||
+      // `20269` similar to `202609`.
+      /^\d{5}$/u.test(source) ||
+      // `202613` similar to `202612`.
+      /^\d{6}$/u.test(source) ||
+      // `20260229` similar to `20260228`.
+      /^\d{8}$/u.test(source) ||
+      // `23:60` or `23:59:60` similar to `23:59` or `23:59:59`.
+      /^\d+:\d+(?::\d+)?$/u.test(source);
+
+    if (!looksLikeInvalidDateTime) {
+      return undefined;
+    }
+
+    return (_index: number) => source;
+  }
 }
 
 function addDays(date: Date, amount: number): Date {
@@ -273,6 +332,14 @@ function addMinutes(date: Date, amount: number): Date {
 
 function addSeconds(date: Date, amount: number): Date {
   return new Date(date.getTime() + amount * 1000);
+}
+
+function formatTime(date: Date, hourText: string, minuteText: string, secondText?: string): string {
+  const timeText = [
+    String(date.getUTCHours()).padStart(hourText.length, "0"),
+    String(date.getUTCMinutes()).padStart(minuteText.length, "0")
+  ].join(":");
+  return timeText + (secondText ? `:${String(date.getUTCSeconds()).padStart(secondText.length, "0")}` : "");
 }
 
 function isValidDate(year: number, month: number, day: number): boolean {
