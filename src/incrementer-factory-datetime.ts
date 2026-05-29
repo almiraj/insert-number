@@ -6,10 +6,10 @@ import type { Incrementer } from "./incrementer";
 export default class DatetimeIncrementerFactory {
   /**
    * Creates a date-time incrementer.
-   * Supports patterns like `2026/12/31 23:59:58` and `2026-12-31 23:59:58`.
+   * Supports patterns like `2026/12/31 23:58`, `2026/12/31 23:59:58`, `2026-12-31 23:58`, and `2026-12-31 23:59:58`.
    */
   static createFullDateTimeIncrementer(source: string): Incrementer | undefined {
-    const match = /^(\d{4})([\/-])(\d{1,2})\2(\d{1,2})(\s+)(\d{1,2}):(\d{1,2}):(\d{1,2})$/u.exec(source);
+    const match = /^(\d{4})([\/-])(\d{1,2})\2(\d{1,2})(\s+)(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/u.exec(source);
     if (!match) {
       return undefined;
     }
@@ -20,7 +20,7 @@ export default class DatetimeIncrementerFactory {
     const day = Number(dayText);
     const hour = Number(hourText);
     const minute = Number(minuteText);
-    const second = Number(secondText);
+    const second = Number(secondText ?? "0");
 
     if (!isValidDate(year, month, day) || !isValidDateTimeTime(hour, minute, second)) {
       return undefined;
@@ -28,7 +28,7 @@ export default class DatetimeIncrementerFactory {
 
     const start = Date.UTC(year, month - 1, day, hour, minute, second);
     return (index: number) => {
-      const incrementedDate = new Date(start + index * 1000);
+      const incrementedDate = new Date(start + index * (secondText ? 1000 : 60 * 1000));
       const dateText = [
         String(incrementedDate.getUTCFullYear()).padStart(yearText.length, "0"),
         String(incrementedDate.getUTCMonth() + 1).padStart(monthText.length, "0"),
@@ -36,10 +36,11 @@ export default class DatetimeIncrementerFactory {
       ].join(separatorText);
       const timeText = [
         String(incrementedDate.getUTCHours()).padStart(hourText.length, "0"),
-        String(incrementedDate.getUTCMinutes()).padStart(minuteText.length, "0"),
-        String(incrementedDate.getUTCSeconds()).padStart(secondText.length, "0")
+        String(incrementedDate.getUTCMinutes()).padStart(minuteText.length, "0")
       ].join(":");
-      return dateText + spacer + timeText;
+      const fullTimeText = timeText
+        + (secondText ? `:${String(incrementedDate.getUTCSeconds()).padStart(secondText.length, "0")}` : "");
+      return dateText + spacer + fullTimeText;
     };
   }
 
