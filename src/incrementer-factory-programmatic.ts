@@ -8,7 +8,7 @@ export class ProgrammaticIncrementerFactory {
   /**
    * Creates a repeated cycling numeric incrementer.
    * Supports patterns like `1*2~3`, which yields `1`, `1`, `2`, `2`, `3`, `3`, `1`, ...
-   * Supports patterns like `[ 9]*2~[10]`, which yields `[ 9]`, `[ 9]`, `[10]`, `[10]`, `[ 9]`, ...
+   * Supports patterns like `[ 9]*2~10`, which yields `[ 9]`, `[ 9]`, `[10]`, `[10]`, `[ 9]`, ...
    */
   static createRepeatedCyclingNumericIncrementer(source: string): Incrementer | undefined {
     const match = /^(.*?)\*(.+?)~(.+)$/u.exec(source);
@@ -39,7 +39,7 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const matchEndDigits = /\d+/u.exec(endSource);
+    const matchEndDigits = /^\d+$/u.exec(endSource);
     const end = matchEndDigits ? Number.parseInt(matchEndDigits[0], 10) : undefined;
     if (end === undefined) {
       return undefined;
@@ -84,7 +84,7 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const matchEndDigits = /\d+/u.exec(endSource);
+    const matchEndDigits = /^\d+$/u.exec(endSource);
     const end = matchEndDigits ? Number.parseInt(matchEndDigits[0], 10) : undefined;
     if (end === undefined) {
       return undefined;
