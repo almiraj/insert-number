@@ -450,6 +450,20 @@ describe("exceptionally parses dates with a trailing space", () => {
   }
 });
 
+describe("characterSets sequences with prefix/suffix", () => {
+  const examples = [
+    ["ｱ)", ["ｱ)", "ｲ)", "ｳ)", "ｴ)"]],
+    ["_ｱ", ["_ｱ", "_ｲ", "_ｳ", "_ｴ"]],
+    ["(ｱ)", ["(ｱ)", "(ｲ)", "(ｳ)", "(ｴ)"]],
+  ];
+
+  for (const [source, expected] of examples) {
+    it(`formats ${source}`, () => {
+      assert.deepEqual(incrementFor(source, 4), expected);
+    });
+  }
+});
+
 describe("validates Unicode-ordered characterSet sequences", () => {
   const unicodeOrderedStartChars = [
     "①",
