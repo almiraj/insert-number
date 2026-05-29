@@ -20,6 +20,9 @@ export class ProgrammaticIncrementerFactory {
     if (/[~*]/u.test(repeatSource + endSource)) {
       return undefined;
     }
+    if (looksLikeDateTimeSource(startSource)) {
+      return undefined;
+    }
 
     const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
     if (!matchStartParts) {
@@ -68,6 +71,9 @@ export class ProgrammaticIncrementerFactory {
     if (/[~*]/u.test(endSource)) {
       return undefined;
     }
+    if (looksLikeDateTimeSource(startSource)) {
+      return undefined;
+    }
 
     const matchStartParts = /^(.*?)( *)(\d+)(.*)$/u.exec(startSource);
     if (!matchStartParts) {
@@ -107,6 +113,9 @@ export class ProgrammaticIncrementerFactory {
 
     const [, startSource, repeatSource] = match;
     if (/[~*]/u.test(repeatSource)) {
+      return undefined;
+    }
+    if (looksLikeDateTimeSource(startSource)) {
       return undefined;
     }
 
@@ -201,6 +210,17 @@ export class ProgrammaticIncrementerFactory {
 
     return createCharacterFormatter(startSource, repeat);
   }
+
+  /**
+   * Repeats invalid programmatic-looking inputs.
+   */
+  static createInvalidProgrammaticRepeatFormatter(source: string): Incrementer | undefined {
+    if (!/[~*]/u.test(source)) {
+      return undefined;
+    }
+
+    return (_index: number) => source;
+  }
 }
 
 function createCharacterFormatter(source: string, repeat: number, cycleLength?: number): Incrementer | undefined {
@@ -229,6 +249,10 @@ function createCharacterFormatter(source: string, repeat: number, cycleLength?: 
 function parseIntegerPart(source: string): number | undefined {
   const match = /\d+/u.exec(source);
   return match ? Number.parseInt(match[0], 10) : undefined;
+}
+
+function looksLikeDateTimeSource(source: string): boolean {
+  return /\d[\/:-]\d/u.test(source);
 }
 
 function createNumberFormatter(prefix: string, padding: string, digits: string, suffix: string): (value: number) => string {

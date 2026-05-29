@@ -16,6 +16,7 @@ export function detectIncrementer(source: string): Incrementer | undefined {
     ProgrammaticIncrementerFactory.createCyclingCharacterIncrementer(source) ??
     ProgrammaticIncrementerFactory.createRepeatedNumericIncrementer(source) ??
     ProgrammaticIncrementerFactory.createRepeatedCharacterIncrementer(source) ??
+    ProgrammaticIncrementerFactory.createInvalidProgrammaticRepeatFormatter(source) ??
     DatetimeIncrementerFactory.createFullDateTimeIncrementer(source) ??
     DatetimeIncrementerFactory.createYmdIncrementer(source) ??
     DatetimeIncrementerFactory.createMdydIncrementer(source) ??
