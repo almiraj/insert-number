@@ -18,8 +18,9 @@ export function detectIncrementer(source: string): Incrementer | undefined {
     ProgrammaticIncrementerFactory.createRepeatedNumericIncrementer(source) ??
     ProgrammaticIncrementerFactory.createRepeatedCharacterIncrementer(source) ??
     ProgrammaticIncrementerFactory.createInvalidProgrammaticRepeatFormatter(source) ??
-    // Like "2026/4/29".
-    DatetimeIncrementerFactory.createFullDateTimeIncrementer(source) ??
+    // Like "2026/4/29" or "12/31 23:58".
+    DatetimeIncrementerFactory.createYmdTimeIncrementer(source) ??
+    DatetimeIncrementerFactory.createMdTimeIncrementer(source) ??
     DatetimeIncrementerFactory.createYmdIncrementer(source) ??
     DatetimeIncrementerFactory.createMdydIncrementer(source) ??
     DatetimeIncrementerFactory.createMdIncrementer(source) ??
