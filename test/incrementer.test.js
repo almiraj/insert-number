@@ -561,7 +561,6 @@ describe("programmatic numeric", () => {
       assert.deepEqual(incrementFor(source, expected.length), expected);
     });
   }
-
 });
 
 describe("programmatic character", () => {
@@ -582,6 +581,7 @@ describe("programmatic character", () => {
 
 describe("fallback: date-like input", () => {
   const examples = [
+    "[2026/04]",
     "_2026/04",
     "2026/04_",
     "202613",
@@ -642,6 +642,7 @@ describe("fallback: invalid programmatic input", () => {
     "1*3*2",
     "1*3~2~1",
     "1*3~2*1",
+    "(a)~3",
     "Nov~3",
     "Nov*3",
     "foo*bar",
