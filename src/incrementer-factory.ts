@@ -120,6 +120,7 @@ export default class IncrementerFactory {
         const prefix = source.slice(0, sourceOffset);
         const suffix = source.slice(sourceOffset + joinedNonAsciiDigitChars.length);
         const nonAsciiMembers = [...nonAsciiDigitCharSet];
+        // Treat index of array as real numbers (it is conversion)
         const rawDigits = [...joinedNonAsciiDigitChars].map(c => String(nonAsciiMembers.indexOf(c))).join("");
         const start = Number.parseInt(rawDigits, 10);
         const width = rawDigits.length;
