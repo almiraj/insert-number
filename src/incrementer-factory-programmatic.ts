@@ -156,8 +156,8 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const repeat = parseIntegerPart(repeatSource);
-    const cycleLength = parseIntegerPart(cycleLengthSource);
+    const repeat = /^\d+$/u.test(repeatSource) ? Number.parseInt(repeatSource, 10) : undefined;
+    const cycleLength = /^\d+$/u.test(cycleLengthSource) ? Number.parseInt(cycleLengthSource, 10) : undefined;
     if (repeat === undefined || cycleLength === undefined || repeat <= 0 || cycleLength <= 0) {
       return undefined;
     }
@@ -180,7 +180,7 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const cycleLength = parseIntegerPart(cycleLengthSource);
+    const cycleLength = /^\d+$/u.test(cycleLengthSource) ? Number.parseInt(cycleLengthSource, 10) : undefined;
     if (cycleLength === undefined || cycleLength <= 0) {
       return undefined;
     }
@@ -203,7 +203,7 @@ export class ProgrammaticIncrementerFactory {
       return undefined;
     }
 
-    const repeat = parseIntegerPart(repeatSource);
+    const repeat = /^\d+$/u.test(repeatSource) ? Number.parseInt(repeatSource, 10) : undefined;
     if (repeat === undefined || repeat <= 0) {
       return undefined;
     }
@@ -246,15 +246,6 @@ function createCharacterFormatter(source: string, repeat: number, cycleLength?: 
   return undefined;
 }
 
-function parseIntegerPart(source: string): number | undefined {
-  const match = /\d+/u.exec(source);
-  return match ? Number.parseInt(match[0], 10) : undefined;
-}
-
-function looksLikeDateTimeSource(source: string): boolean {
-  return /\d[\/:-]\d/u.test(source);
-}
-
 function createNumberFormatter(prefix: string, padding: string, digits: string, suffix: string): (value: number) => string {
   const zeroPadded = digits.startsWith("0") && digits.length > 1;
   const width = zeroPadded ? digits.length : padding.length + digits.length;
@@ -264,4 +255,11 @@ function createNumberFormatter(prefix: string, padding: string, digits: string, 
     const formatted = String(value).padStart(width, padChar);
     return `${prefix}${formatted}${suffix}`;
   };
+}
+
+/**
+ * Programmatic formats do not support date/time-like inputs.
+ */
+function looksLikeDateTimeSource(source: string): boolean {
+  return /\d[\/:-]\d/u.test(source);
 }
