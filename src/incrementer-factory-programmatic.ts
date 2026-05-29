@@ -1,5 +1,5 @@
 import type { Incrementer } from "./incrementer";
-import { CHAR_MEMBER_SETS } from "./incrementer-constant";
+import { Constants } from "./incrementer-constant";
 
 /**
  * Creates incrementers for compact programmatic prompts.
@@ -228,7 +228,7 @@ function createCharacterFormatter(source: string, repeat: number, cycleLength?: 
     return undefined;
   }
 
-  for (const charMemberSet of CHAR_MEMBER_SETS) {
+  for (const charMemberSet of Constants.CHAR_MEMBER_SETS) {
     const members = [...charMemberSet];
     const startIndex = members.indexOf(source);
     if (startIndex < 0) {

@@ -1,5 +1,5 @@
 import type { Incrementer } from "./incrementer";
-import { CHAR_MEMBER_SETS } from "./incrementer-constant";
+import { Constants } from "./incrementer-constant";
 
 /**
  * Creates incrementers for numbers, characters, and fallback values.
@@ -93,18 +93,11 @@ export default class IncrementerFactory {
    * Supports Arabic-Indic, Extended Arabic-Indic, Devanagari, and Bengali digits.
    */
   static createNonAsciiDecimalIncrementer(source: string): Incrementer | undefined {
-    const nonAsciiDigitCharSets = [
-      "０１２３４５６７８９",
-      "٠١٢٣٤٥٦٧٨٩",
-      "۰۱۲۳۴۵۶۷۸۹",
-      "०१२३४५६७८९",
-      "০১২৩৪৫৬৭৮৯"
-    ];
 
     let sourceOffset = 0;
     for (const char of [...source]) {
 
-      for (const nonAsciiDigitCharSet of nonAsciiDigitCharSets) {
+      for (const nonAsciiDigitCharSet of Constants.NON_ASCII_DIGIT_CHAR_SETS) {
         if (!nonAsciiDigitCharSet.includes(char)) {
           continue;
         }
@@ -195,7 +188,7 @@ export default class IncrementerFactory {
     let sourceOffset = 0;
     for (const char of [...source]) {
 
-      for (const charMemberSet of CHAR_MEMBER_SETS) {
+      for (const charMemberSet of Constants.CHAR_MEMBER_SETS) {
         const charMembers = [...charMemberSet];
         const startIdx = charMembers.indexOf(char);
         if (startIdx >= 0) {
